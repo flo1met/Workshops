@@ -1,0 +1,93 @@
+---
+title: "Practical"
+format: html
+editor: source
+---
+
+## Introduction
+
+The `bvarnet` package implements methods to analyse (multilevel) Vector Autoregression commonly used for the analysis of intensive longitudinal datasets like EMA data.
+
+## Data
+
+Load the example dataset using
+```{r}
+data(studentlife)
+```
+
+Now inspect the data 
+```{r}
+
+```
+
+What outcome model would you choose for this dataset?
+
+## Prior Specification
+
+First we need to specify the prior distributions that we want to use on the parameters.
+For this we can use the `set_priors()` function. As we are running a ordinal model, without covariates, we have to specify priors on the temporal structure (denoted by the $\Phi$ matrix) and on the category threshold parameters ($\kappa$) which is specific to the adjacent category ordinal model.
+
+You can choose priors using the following function. For now, we want to specify uninformative normal priors. Pick location and scale values for uninformative prior specification:
+```{r}
+priors <- set_priors(phi = prior(family = "normal",
+                                 loc = _,
+                                 scale = _),
+                     kappa = prior(family = "normal",
+                                   loc = _,
+                                   scale = _))
+
+priors
+```
+
+Currently, three prior families are implemented: normal, student-t and chauchy. For standart deviations and random effects all of these priors are automatically scaled to half-priors. 
+For each distribution, the location and scale parameters can be specified. For the student-t distribution, the degrees of freedom can also be specified. 
+
+## Model Estimation
+
+We want to estimate a temporal network for the variables `anxious`, `calm`, `conventional`, `critical`, `dependable`. Additionally, we want to control for the covariate `sleep_hour`. Use `?bvar` to learn about the fit function syntax.
+We also want to estimate a random intercept and person-specific random slopes for the lagged coefficients. You can do this using `re_cols = c("Intercept")` and `re_temporal = TRUE`.
+
+```{r}
+
+```
+
+## Inspect the results
+
+You can inspect the results using the `summary()` function.
+If the output ios too large to be displayed, you can use the `extract_param()` function to extract a data frame with all estimated parameters.
+
+```{r}
+
+```
+
+## Hypothesis Testing using Bayes Factors
+
+To estimate Bayes factors for a single parameter, or a set of parameters, we can use the `bf_table()` function. Bayes factors are computed via the **Savage–Dickey density ratio** (SDDR), which, for a point null $H_0 : \theta = \theta_0$ nested in $H_1 : \theta \neq \theta_0$ with shared nuisance parameters, gives
+
+$$
+\mathrm{BF}_{01} \;=\; \frac{p(\theta = \theta_0 \mid y)}{p(\theta = \theta_0)},
+$$
+
+i.e. the ratio of the posterior to the prior density evaluated at the null value. `bf_table()` reports $\mathrm{BF}_{10} = 1 / \mathrm{BF}_{01}$ by approximating the posterior density at $\theta_0 = 0$ from the MCMC draws.
+
+To perform a hypothesis test on effects involving a specific variable, we can call the `bf_table()` function, specifying which variable we want to look at using the `variable` argument. Lets investigate if the hours of sleep the individual got in the previous night (`sleep_hour`) has an influence on the network structure:
+
+```{r}
+bf_tab <- bf_table(fit, variable = "sleep_hour")
+bf_tab
+```
+
+The output now shows 6 rows. The five "Fixed Effect" rows show if the the covariate `sleep_hour` has an influence on each node separately. The "Fixed Effect (join)" row displays a single Bayes factor that in this case tests the hypothesis
+
+H: Is there a difference in the baseline of the network structure that is explained by the variable `sleep_hour`
+
+Interpret the Bayes factor:
+
+## Plot the network
+
+Using the `qgraph` package and the `extract_network_matrix()` function you can easily plot the estimated network
+```{r}
+nw_mat <- extract_network_matrix(fit)
+qgraph(nw_mat)
+```
+
